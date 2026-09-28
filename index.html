@@ -134,6 +134,40 @@
   .toast{position:absolute;left:50%;top:14px;transform:translateX(-50%);background:var(--ink);color:#fff;font-size:12px;padding:8px 14px;border-radius:20px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:10}
   .toast.show{opacity:.92}
   .loading{padding:40px;text-align:center;color:var(--muted);font-size:13px}
+
+  /* 일정 입력 창: 글자 작게 + 높이 낮게 */
+  #evSheet{padding:8px 18px 22px}
+  #evSheet .grab{margin-bottom:10px}
+  #evSheet h3{font-size:15px;margin-bottom:6px}
+  #evSheet label{margin:9px 0 4px;font-size:10.5px}
+  #evSheet input,#evSheet textarea,#evSheet select{font-size:14px;padding:8px 10px;border-radius:9px}
+  #evSheet #fComment{height:50px}
+  #evSheet .timewrap button{font-size:11px}
+  #evSheet .wd{padding:6px 0;font-size:10.5px}
+  #evSheet .chip{padding:8px 0;font-size:12px}
+  #evSheet .actions{margin-top:14px}
+  #evSheet .btn{padding:11px 0;font-size:13px;border-radius:11px}
+  #evSheet .series{font-size:11px;margin-top:9px}
+
+  /* 연·월 선택 */
+  .month{cursor:pointer}
+  .month::after{content:"▾";font-size:11px;color:var(--muted);margin-left:4px;vertical-align:3px}
+  .open-ym .dim{display:block}
+  .open-ym #ymSheet{transform:none;visibility:visible}
+  .ym-head{display:flex;align-items:center;justify-content:space-between;margin:0 0 10px}
+  .ym-head button{border:none;background:none;font-size:20px;color:var(--muted);padding:4px 12px;cursor:pointer}
+  .ym-head .ym-year{font-size:18px;font-weight:600;border:none;background:none;cursor:pointer;font-family:inherit;color:var(--ink);padding:4px 8px}
+  .ym-year::after{content:"▾";font-size:10px;color:var(--muted);margin-left:4px;vertical-align:2px}
+  .ym-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .ym-grid button{border:1px solid var(--line);background:var(--bg);border-radius:9px;padding:8px 0;font-size:13px;font-family:inherit;color:var(--ink);cursor:pointer}
+  .ym-grid button.cur{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .ym-grid button.now:not(.cur){border-color:var(--ink);font-weight:600}
+
+  /* D-day */
+  .hright{display:flex;align-items:center;gap:8px}
+  .dday{font-size:12px;font-weight:600;color:var(--ink);white-space:nowrap}
+  .dday i{font-style:normal;margin-right:3px}
+  .ms{display:inline-block;font-size:9px;font-weight:600;color:var(--ink);margin-left:2px;vertical-align:middle;letter-spacing:-.2px}
 </style>
 </head>
 <body>
@@ -157,8 +191,8 @@
 <div class="app" id="app">
   <div class="toast" id="toast"></div>
   <header>
-    <div class="nav"><button onclick="move(-1)">‹</button><span class="month" id="mtitle"></span><button onclick="move(1)">›</button></div>
-    <button class="today-btn" onclick="goToday()" data-i="today"></button>
+    <div class="nav"><button onclick="move(-1)">‹</button><span class="month" id="mtitle" onclick="openYM()"></span><button onclick="move(1)">›</button></div>
+    <div class="hright"><span class="dday"><i>♡</i><span id="ddayNum"></span></span><button class="today-btn" onclick="goToday()" data-i="today"></button></div>
   </header>
 
   <div class="content" id="calView">
@@ -233,6 +267,12 @@
     </div>
   </div>
 
+
+  <div class="sheet" id="ymSheet">
+    <div class="grab"></div>
+    <div class="ym-head"><button onclick="ymMove(-1)">‹</button><button class="ym-year" id="ymYear" onclick="ymToggle()"></button><button onclick="ymMove(1)">›</button></div>
+    <div class="ym-grid" id="ymGrid"></div>
+  </div>
   <div class="sheet" id="choiceSheet">
     <div class="grab"></div>
     <h3 id="cTitle"></h3>
@@ -321,6 +361,7 @@ function goToday(){
 /* ───── 캘린더 ───── */
 function render(){
   document.getElementById('mtitle').textContent=DICT.monthTitle(view);
+  ddayNum.textContent=dayNo(today());
   const first=new Date(view.getFullYear(),view.getMonth(),1);
   const start=new Date(first); start.setDate(1-first.getDay());
   const last=new Date(view.getFullYear(),view.getMonth()+1,0);
@@ -341,7 +382,7 @@ function render(){
       if(sel===k)c.push('sel');
       // 노트 점: A가 쓴 날 파랑, B가 쓴 날 초록
       const nd=['A','B'].filter(p=>diaries.some(x=>x.date===k&&x.who===p)).map(p=>`<i class="${cls(p)}"></i>`).join('');
-      cells+=`<div class="${c.join(' ')}" style="grid-column:${i+1}" data-k="${k}" onclick="tapDay('${k}')"><span class="num">${d.getDate()}</span>${nd?`<span class="ndots">${nd}</span>`:''}<span class="more" data-k="${k}"></span></div>`;
+      cells+=`<div class="${c.join(' ')}" style="grid-column:${i+1}" data-k="${k}" onclick="tapDay('${k}')"><span class="num">${d.getDate()}</span>${nd?`<span class="ndots">${nd}</span>`:''}${milestone(k)?`<span class="ms">♡${milestone(k)}</span>`:''}<span class="more" data-k="${k}"></span></div>`;
     }
     const segs=events.filter(e=>e.start<=ymd(we)&&e.end>=ymd(ws)).map(e=>({
       e, s:Math.max(0,Math.round((parse(e.start)-ws)/864e5)), en:Math.min(6,Math.round((parse(e.end)-ws)/864e5))
@@ -381,7 +422,42 @@ function openSheet(e){
   app.classList.remove('open-day','open-choice'); app.classList.add('open-ev');
 }
 function openEdit(id){const e=events.find(x=>x.id===id);if(!e)return;editing=id;openSheet(e)}
-function closeSheet(){app.classList.remove('open-ev','open-day','open-choice');editing=null}
+
+/* ───── D-day ───── */
+const DDAY_START='2026-09-15';   // 이 날이 1일 (바꾸려면 여기 날짜만 수정)
+const dayNo=k=>Math.round((parse(k)-parse(DDAY_START))/864e5)+1;
+// 기념일: 1000일까지는 100일마다(♡100 … ♡1000), 매년 같은 날(♡1y, ♡2y …)
+function milestone(k){
+  const n=dayNo(k); if(n<1)return '';
+  if(n%100===0&&n<=1000)return n;
+  const s=parse(DDAY_START), d=parse(k), y=d.getFullYear()-s.getFullYear();
+  if(y>=1&&d.getMonth()===s.getMonth()&&d.getDate()===s.getDate())return y+'y';
+  return '';
+}
+function closeSheet(){app.classList.remove('open-ev','open-day','open-choice','open-ym');editing=null}
+/* ───── 연·월 선택 (상단 2026/09 누르면) ───── */
+let ymY=0, ymS=0, ymMode='month';
+function openYM(){ymY=view.getFullYear();ymMode='month';renderYM();app.classList.remove('open-ev','open-day','open-choice');app.classList.add('open-ym');}
+function ymMove(n){if(ymMode==='month')ymY+=n;else ymS+=n*12;renderYM()}
+function ymToggle(){ymMode=ymMode==='month'?'year':'month';ymS=ymY-5;renderYM()}
+function renderYM(){
+  const now=new Date();
+  if(ymMode==='month'){
+    ymYear.textContent=ymY;
+    ymGrid.innerHTML=[...Array(12)].map((_,m)=>{
+      const cur=ymY===view.getFullYear()&&m===view.getMonth(), isNow=ymY===now.getFullYear()&&m===now.getMonth();
+      return `<button class="${cur?'cur':''} ${isNow?'now':''}" onclick="ymPick(${m})">${pad(m+1)}</button>`;
+    }).join('');
+  }else{
+    const s=ymS;
+    ymYear.textContent=`${s} – ${s+11}`;
+    ymGrid.innerHTML=[...Array(12)].map((_,i)=>{const y=s+i;
+      return `<button class="${y===view.getFullYear()?'cur':''} ${y===now.getFullYear()?'now':''}" onclick="ymPickYear(${y})">${y}</button>`;}).join('');
+  }
+}
+function ymPickYear(y){ymY=y;ymMode='month';renderYM()}
+function ymPick(m){view=new Date(ymY,m,1);sel=null;app.classList.remove('open-ym');render()}
+
 function pick(t){pickT=t;document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c.dataset.t===t))}
 
 // ＋ 버튼: 오늘 날짜로 바로 추가
