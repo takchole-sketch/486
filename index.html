@@ -167,7 +167,14 @@
   .hright{display:flex;align-items:center;gap:8px}
   .dday{font-size:12px;font-weight:600;color:var(--ink);white-space:nowrap}
   .dday i{font-style:normal;margin-right:3px}
-  .ms{display:inline-block;font-size:9px;font-weight:600;color:var(--ink);margin-left:2px;vertical-align:middle;letter-spacing:-.2px}
+  /* 기념일: 칸 아래 가운데, 연분홍 칸 + 진분홍 글자 */
+  :root{--pink:#D6457F;--pink-bg:#FCE4EE}
+  .cell .ms{position:absolute;left:2px;right:2px;bottom:3px;margin:0;text-align:center;font-size:9.5px;font-weight:600;line-height:15px;color:var(--pink)}
+  /* 기념일과 +n 이 같은 날이면 +n 은 오른쪽 위로 */
+  .cell.has-ms .more:not(:empty){left:auto;right:1px;bottom:3px;padding:0 3px;line-height:16px}
+  .cell.has-ms:has(.more:not(:empty)) .ms{right:22px}
+
+  .cell .ms{background:var(--pink-bg);border-radius:4px;height:16px;line-height:16px}
 </style>
 </head>
 <body>
@@ -380,6 +387,7 @@ function render(){
       if(i===0)c.push('sun');
       if(k===T)c.push('today');
       if(sel===k)c.push('sel');
+      if(milestone(k))c.push('has-ms');
       // 노트 점: A가 쓴 날 파랑, B가 쓴 날 초록
       const nd=['A','B'].filter(p=>diaries.some(x=>x.date===k&&x.who===p)).map(p=>`<i class="${cls(p)}"></i>`).join('');
       cells+=`<div class="${c.join(' ')}" style="grid-column:${i+1}" data-k="${k}" onclick="tapDay('${k}')"><span class="num">${d.getDate()}</span>${nd?`<span class="ndots">${nd}</span>`:''}${milestone(k)?`<span class="ms">♡${milestone(k)}</span>`:''}<span class="more" data-k="${k}"></span></div>`;
