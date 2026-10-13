@@ -175,6 +175,28 @@
   .cell.has-ms:has(.more:not(:empty)) .ms{right:22px}
 
   .cell .ms{background:var(--pink-bg);border-radius:4px;height:16px;line-height:16px}
+
+  /* ── Timeline 탭 (월별 노트를 스레드처럼) ── */
+  .feed{display:none;padding:4px 0 90px}
+  .tw{display:flex;gap:10px;padding:12px 16px 4px;position:relative}
+  .tw .av{flex:0 0 38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;position:relative;z-index:1}
+  .tw .av.a{background:var(--a-bg);color:var(--a-ink)} .tw .av.b{background:var(--b-bg);color:var(--b-ink)}
+  .tw .bd{flex:1;min-width:0;padding-bottom:8px}
+  .tw .nm{font-size:13.5px;font-weight:700}
+  .tw .tx{font-size:14px;line-height:1.55;margin-top:2px;white-space:pre-wrap;word-break:break-word}
+  .tw .rp{font-size:11.5px;color:var(--muted);margin-top:2px}
+  .tw .rp b{font-weight:500;color:var(--a-ink)} .tw .rp b.b{color:var(--b-ink)}
+  .tw.has-next::after{content:"";position:absolute;left:34px;top:52px;bottom:-14px;width:2px;background:#D5D8DD;border-radius:2px}
+  .fempty{text-align:center;color:var(--muted);font-size:13px;padding:60px 0}
+  .thread{background:var(--card);border:1px solid var(--line);border-radius:18px;margin:10px 12px;padding:4px 0 6px;overflow:hidden}
+  .thread .dh{display:flex;align-items:center;gap:8px;padding:10px 16px 0;font-size:11.5px;color:var(--muted)}
+  .thread .dh .dd{flex:0 0 auto}
+  .thread .dh .ms2{margin-left:auto;flex:0 0 auto;color:#D6457F;background:#FCE4EE;border-radius:10px;padding:1px 7px;font-weight:600}
+  .evl{flex:1;min-width:0;display:flex;gap:6px;align-items:center;overflow:hidden;white-space:nowrap}
+
+  .evl .e2{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:10px;line-height:15px;padding:0 6px;border-radius:4px}
+  .evl .e2.a{background:var(--a-bg);color:var(--a-ink)} .evl .e2.b{background:var(--b-bg);color:var(--b-ink)} .evl .e2.us{background:var(--us-bg);color:var(--us-ink)}
+  .evl .more2{flex:0 0 auto;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -218,11 +240,14 @@
     <div id="dayNotes"></div>
   </div>
 
+  <div class="content feed" id="feedView"></div>
+
   <button class="fab" id="fab" onclick="quickAdd()" aria-label="Add event">+</button>
 
   <nav class="tabbar">
     <button id="tCal" class="on" onclick="tab('cal')"><i>▦</i><span data-i="tabCal"></span></button>
     <button id="tDia" onclick="tab('dia')"><i>✎</i><span data-i="tabNote"></span></button>
+    <button id="tFeed" onclick="tab('feed')"><i>❝</i><span data-i="tabFeed"></span></button>
   </nav>
 
   <div class="dim" onclick="closeSheet()"></div>
@@ -304,7 +329,7 @@ const wk=d=>WK[d.getDay()].charAt(0)+WK[d.getDay()].slice(1).toLowerCase();
 const DICT={
   today:'Today',loading:'Loading…',
   account:'Account',email:'Email',password:'Password',login:'Log in',loggingIn:'Logging in…',welcome:n=>`Welcome, ${n}`,welcomeAll:'Our calendar',
-  loginFoot:'You only need to log in once on this phone.',loginErr:'Wrong email or password. Please try again.',notMember:'This account is not registered in config.js.',myNote:'My note',notePh:'A few words about today',save:'Save',tabCal:'Calendar',tabNote:'Note',
+  loginFoot:'You only need to log in once on this phone.',loginErr:'Wrong email or password. Please try again.',notMember:'This account is not registered in config.js.',myNote:'My note',notePh:'A few words about today',save:'Save',tabCal:'Calendar',tabNote:'Note',tabFeed:'Timeline',noNotesMonth:'No notes this month.',replying:'Replying to',
   newEv:'New event',editEv:'Edit event',dates:'Dates',time:'Time (optional)',clearTime:'Clear',title:'Title',titlePh:'e.g. Trip to Busan',
   comments:'Comments (optional)',commentsPh:'Place, details, links…',whose:'Whose event?',us:'Us',
   del:'Delete',cancel:'Cancel',close:'Close',addEv:'+ Add event',noEvents:'No events on this day.',allDay:'All day',
@@ -369,6 +394,7 @@ function goToday(){
 function render(){
   document.getElementById('mtitle').textContent=DICT.monthTitle(view);
   ddayNum.textContent=dayNo(today());
+  if(window.feedView&&feedView.style.display==='block')renderFeed();
   const first=new Date(view.getFullYear(),view.getMonth(),1);
   const start=new Date(first); start.setDate(1-first.getDay());
   const last=new Date(view.getFullYear(),view.getMonth()+1,0);
@@ -441,6 +467,29 @@ function milestone(k){
   const s=parse(DDAY_START), d=parse(k), y=d.getFullYear()-s.getFullYear();
   if(y>=1&&d.getMonth()===s.getMonth()&&d.getDate()===s.getDate())return y+'y';
   return '';
+}
+
+/* ───── Timeline: 보고 있는 달의 노트를 날짜별 스레드로 ───── */
+// 날짜 옆 미니 일정 막대 (최대 2개 + 나머지 개수)
+
+function evLine(evs){ if(!evs.length)return '<span class="evl"></span>';
+  return `<span class="evl">${evs.slice(0,2).map(e=>`<span class="e2 ${cls(e.owner)}">${esc(e.title)}</span>`).join('')}${evs.length>2?`<span class="more2">+${evs.length-2}</span>`:''}</span>`;}
+function renderFeed(){
+  const m=`${view.getFullYear()}-${pad(view.getMonth()+1)}`;
+  const list=diaries.filter(x=>x.date.startsWith(m));
+  const dates=[...new Set(list.map(x=>x.date))].sort();   // 1일부터 아래로
+  if(!dates.length){feedView.innerHTML=`<div class="fempty">${DICT.noNotesMonth}</div>`;return;}
+  feedView.innerHTML=dates.map(k=>{
+    const ts=list.filter(x=>x.date===k).sort((a,b)=>(a.at||0)-(b.at||0));   // 먼저 저장한 사람이 원글
+    const n=dayNo(k);
+    const body=ts.map((x,i)=>{
+      const c=cls(x.who), nm=NAMES[x.who];
+      const reply=i>0?`<div class="rp">${DICT.replying} <b class="${cls(ts[0].who)}">${esc(NAMES[ts[0].who])}</b></div>`:'';
+      return `<div class="tw ${i<ts.length-1?'has-next':''}"><div class="av ${c}">${esc(nm.slice(0,1))}</div><div class="bd"><div class="nm">${esc(nm)}</div>${reply}<div class="tx">${esc(x.text)}</div></div></div>`;
+    }).join('');
+    const evs=events.filter(e=>e.start<=k&&e.end>=k).sort((a,b)=>(a.time||'').localeCompare(b.time||'')||a.title.localeCompare(b.title));
+    return `<div class="thread"><div class="dh"><span class="dd">${DICT.dayTitle(k)}</span>${evLine(evs)}${n>=1?`<span class="ms2">♡ ${n}</span>`:''}</div>${body}</div>`;
+  }).join('');
 }
 function closeSheet(){app.classList.remove('open-ev','open-day','open-choice','open-ym');editing=null}
 /* ───── 연·월 선택 (상단 2026/09 누르면) ───── */
@@ -592,6 +641,7 @@ async function delEvent(){
 function tab(t){
   calView.style.display=t==='cal'?'block':'none';
   diaryView.style.display=t==='dia'?'block':'none';
+  feedView.style.display=t==='feed'?'block':'none'; tFeed.classList.toggle('on',t==='feed'); if(t==='feed')renderFeed();
   fab.style.display=t==='cal'?'block':'none';
   tCal.classList.toggle('on',t==='cal');tDia.classList.toggle('on',t==='dia');
   if(t==='dia'){loadMine();renderNotes();}
@@ -693,7 +743,7 @@ window.API = {
     text = String(text || '').trim().slice(0, 300);
     if (!text) { await deleteDoc(ref); return null; }
     await setDoc(ref, { date, who: me, text, updatedAt: serverTimestamp() });
-    return { date, who: me, text };
+    return { date, who: me, text, at: Date.now() };
   }
 };
 
@@ -702,7 +752,7 @@ window.API = {
 function subscribe() {
   unsubs.forEach(u => u()); unsubs = [];
   unsubs.push(onSnapshot(query(EV, where('end', '>=', from)), s => window.onEvents(s.docs.map(d => pickEv(d.id, d.data()))), e => fail(e)));
-  unsubs.push(onSnapshot(query(NT, where('date', '>=', from)), s => window.onNotes(s.docs.map(d => { const x = d.data(); return { date: x.date, who: x.who, text: x.text }; })), e => fail(e)));
+  unsubs.push(onSnapshot(query(NT, where('date', '>=', from)), s => window.onNotes(s.docs.map(d => { const x = d.data(); return { date: x.date, who: x.who, text: x.text, at: (x.updatedAt && x.updatedAt.toMillis) ? x.updatedAt.toMillis() : Date.now() }; })), e => fail(e)));
 }
 window.ensureRange = k => {
   if (!me || (from && k >= from)) return;
