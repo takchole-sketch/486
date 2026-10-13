@@ -210,6 +210,23 @@
   .thread .dh .ms2{font-size:10px;padding:1px 6px}
   .evl .e2{font-size:9.5px;line-height:14px;padding:0 5px}
   .fempty{font-size:12px}
+
+  /* ── Note를 캘린더에서 바로 쓰기 ── */
+  .fab2{position:absolute;right:23px;bottom:calc(150px + env(safe-area-inset-bottom));width:44px;height:44px;border-radius:50%;background:var(--card);color:var(--ink);font-size:18px;line-height:44px;text-align:center;border:1px solid var(--line);box-shadow:0 4px 14px rgba(0,0,0,.14);cursor:pointer;z-index:4}
+  .open-note .dim{display:block}
+  .open-note #noteSheet{transform:none;visibility:visible}
+  #noteSheet{padding:8px 18px 22px}
+  #noteSheet .grab{margin-bottom:10px}
+  #noteSheet .write{border:none;padding:0;background:none}
+  #noteSheet textarea{font-size:14px;height:110px;padding:9px 11px}
+  #noteSheet .actions{margin-top:8px}
+  #noteSheet .actions .btn{margin-top:0;padding:11px 0;font-size:13px}
+  #noteSheet .day{margin-top:12px;background:var(--bg);border:none}
+  .dnotes{margin-top:12px;background:var(--bg);border-radius:12px;padding:10px 12px}
+  .dnotes .hd{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--muted);margin-bottom:4px}
+  .dnotes .hd button{border:none;background:none;font-size:12px;color:var(--ink);font-weight:600;cursor:pointer;font-family:inherit;padding:2px 0}
+  .dnotes .entry{font-size:12.5px}
+  .dnotes .none{font-size:12px;color:#B7BBC1;padding:2px 0}
 </style>
 </head>
 <body>
@@ -243,23 +260,15 @@
     <div class="weeks" id="weeks"><div class="loading" data-i="loading"></div></div>
   </div>
 
-  <div class="content diary" id="diaryView">
-    <div class="write">
-      <div class="top"><span data-i="myNote"></span><input type="date" id="dDate" onchange="noteDateChanged()"></div>
-      <textarea id="dText" data-ph="notePh" maxlength="300" oninput="count()"></textarea>
-      <div class="count" id="dCount">0/300</div>
-      <button class="btn" onclick="saveDiary()" data-i="save"></button>
-    </div>
-    <div id="dayNotes"></div>
-  </div>
+  <div id="diaryView" style="display:none"></div>
 
   <div class="content feed" id="feedView"></div>
 
+  <button class="fab2" id="fab2" onclick="openNote(sel||today())" aria-label="Write note">✎</button>
   <button class="fab" id="fab" onclick="quickAdd()" aria-label="Add event">+</button>
 
   <nav class="tabbar">
     <button id="tCal" class="on" onclick="tab('cal')"><i>▦</i><span data-i="tabCal"></span></button>
-    <button id="tDia" onclick="tab('dia')"><i>✎</i><span data-i="tabNote"></span></button>
     <button id="tFeed" onclick="tab('feed')"><i>❝</i><span data-i="tabFeed"></span></button>
   </nav>
 
@@ -302,6 +311,18 @@
     </div>
   </div>
 
+  <!-- Note 창 (✎ 버튼 또는 날짜 목록에서 열기) -->
+  <div class="sheet" id="noteSheet">
+    <div class="grab"></div>
+    <div class="write">
+      <div class="top"><span data-i="myNote"></span><input type="date" id="dDate" onchange="noteDateChanged()"></div>
+      <textarea id="dText" data-ph="notePh" maxlength="300" oninput="count()"></textarea>
+      <div class="count" id="dCount">0/300</div>
+      <div class="actions"><button class="btn ghost" onclick="closeSheet()" data-i="close"></button><button class="btn" onclick="saveDiary()" data-i="save"></button></div>
+    </div>
+    <div id="dayNotes"></div>
+  </div>
+
   <div class="sheet" id="daySheet">
     <div class="grab"></div>
     <h3 id="dTitle"></h3>
@@ -342,7 +363,7 @@ const wk=d=>WK[d.getDay()].charAt(0)+WK[d.getDay()].slice(1).toLowerCase();
 const DICT={
   today:'Today',loading:'Loading…',
   account:'Account',email:'Email',password:'Password',login:'Log in',loggingIn:'Logging in…',welcome:n=>`Welcome, ${n}`,welcomeAll:'Our calendar',
-  loginFoot:'You only need to log in once on this phone.',loginErr:'Wrong email or password. Please try again.',notMember:'This account is not registered in config.js.',myNote:'My note',notePh:'A few words about today',save:'Save',tabCal:'Calendar',tabNote:'Note',tabFeed:'Timeline',noNotesMonth:'No notes this month.',replying:'Replying to',
+  loginFoot:'You only need to log in once on this phone.',loginErr:'Wrong email or password. Please try again.',notMember:'This account is not registered in config.js.',myNote:'My note',notePh:'A few words about today',save:'Save',tabCal:'Calendar',tabNote:'Note',writeNote:'Write',editNote:'Edit',noNoteDay:'No notes yet.',tabFeed:'Timeline',noNotesMonth:'No notes this month.',replying:'Replying to',
   newEv:'New event',editEv:'Edit event',dates:'Dates',time:'Time (optional)',clearTime:'Clear',title:'Title',titlePh:'e.g. Trip to Busan',
   comments:'Comments (optional)',commentsPh:'Place, details, links…',whose:'Whose event?',us:'Us',
   del:'Delete',cancel:'Cancel',close:'Close',addEv:'+ Add event',noEvents:'No events on this day.',allDay:'All day',
@@ -382,7 +403,7 @@ function fail(e){toast(DICT.fail+(e&&e.message||e),3000)}
 window.appReady=me=>{ME=me;splash.classList.remove('show');login.classList.remove('show');applyText();render();}
 // 일정·노트가 바뀔 때마다 (상대가 바꿔도) 실시간으로 불려요
 window.onEvents=list=>{events=list;render();}
-window.onNotes=list=>{diaries=list;render();if(diaryView.style.display==='block')renderNotes();}
+window.onNotes=list=>{diaries=list;render();if(app.classList.contains('open-note'))renderNotes();if(app.classList.contains('open-day')&&dayK)openDay(dayK);}
 // 로그인 화면 보여주기 (?u=A 또는 ?u=B 링크면 계정이 미리 채워져요)
 window.showLogin=msg=>{
   splash.classList.remove('show'); login.classList.add('show'); applyText();
@@ -400,7 +421,7 @@ async function doLogin(ev){
 // Today 버튼: 이번 달로 이동 (Note 탭에서는 오늘 날짜로)
 function goToday(){
   sel=null; view=new Date(); view=new Date(view.getFullYear(),view.getMonth(),1); render();
-  if(diaryView.style.display==='block'){dDate.value=today();noteDateChanged();}
+
 }
 
 /* ───── 캘린더 ───── */
@@ -504,7 +525,13 @@ function renderFeed(){
     return `<div class="thread"><div class="dh"><span class="dd">${DICT.dayTitle(k)}</span>${evLine(evs)}${n>=1?`<span class="ms2">♡ ${n}</span>`:''}</div>${body}</div>`;
   }).join('');
 }
-function closeSheet(){app.classList.remove('open-ev','open-day','open-choice','open-ym');editing=null}
+function closeSheet(){app.classList.remove('open-ev','open-day','open-choice','open-ym','open-note');editing=null}
+// Note 창 열기 (k 날짜) — ✎ 버튼: 날짜를 하나 눌러둔 상태면 그 날짜, 아니면 오늘
+function openNote(k){
+  if(!ME)return; if(sel){sel=null;render();}
+  dDate.value=k; noteDateChanged();
+  app.classList.remove('open-ev','open-day','open-choice','open-ym'); app.classList.add('open-note');
+}
 /* ───── 연·월 선택 (상단 2026/09 누르면) ───── */
 let ymY=0, ymS=0, ymMode='month';
 function openYM(){ymY=view.getFullYear();ymMode='month';renderYM();app.classList.remove('open-ev','open-day','open-choice');app.classList.add('open-ym');}
@@ -542,6 +569,10 @@ function openDay(k){
     .sort((a,b)=>(a.time||'').localeCompare(b.time||'')||a.title.localeCompare(b.title));
   dayList.innerHTML=list.length?list.map(e=>`<div class="dl" onclick="openEdit('${e.id}')"><i class="dot ${cls(e.owner)}"></i><span class="tm">${e.time||DICT.allDay}</span><span class="ttl">${esc(e.title)}${e.series?'<span class="rp">🔁</span>':''}${e.comment?'<span class="cm">💬</span>':''}</span>${e.start!==e.end?`<span class="rg">${short(e.start)} – ${short(e.end)}</span>`:''}</div>`).join('')
     :`<div class="dl-empty">${DICT.noEvents}</div>`;
+  // 그날 노트 (읽기) + 내 노트 쓰기 버튼
+  const ns=diaries.filter(x=>x.date===k), mine=ns.find(x=>x.who===ME);
+  const nrow=p=>{const x=ns.find(y=>y.who===p);return x?`<div class="entry"><span class="tag ${cls(p)}">${esc(NAMES[p])}</span><span>${esc(x.text)}</span></div>`:''};
+  dayList.insertAdjacentHTML('beforeend',`<div class="dnotes"><div class="hd"><span>Note</span><button onclick="openNote('${k}')">✎ ${mine?DICT.editNote:DICT.writeNote}</button></div>${ns.length?nrow('A')+nrow('B'):`<div class="none">${DICT.noNoteDay}</div>`}</div>`);
   app.classList.remove('open-ev'); app.classList.add('open-day');
 }
 function addFromDay(){editing=null;openSheet({start:dayK,end:dayK,owner:ME})}
@@ -656,7 +687,8 @@ function tab(t){
   diaryView.style.display=t==='dia'?'block':'none';
   feedView.style.display=t==='feed'?'block':'none'; tFeed.classList.toggle('on',t==='feed'); if(t==='feed')renderFeed();
   fab.style.display=t==='cal'?'block':'none';
-  tCal.classList.toggle('on',t==='cal');tDia.classList.toggle('on',t==='dia');
+  fab2.style.display=t==='cal'?'block':'none';
+  tCal.classList.toggle('on',t==='cal');
   if(t==='dia'){loadMine();renderNotes();}
 }
 function count(){dCount.textContent=`${dText.value.length}/300`}
