@@ -235,6 +235,42 @@
   .cell.dd .num{background:#FCE4EE;color:#C2386F;font-weight:700}
   .cell.dd.today .num{background:#D6457F;color:#fff}
   .dot.d{background:#D6457F}
+
+  /* ── 월별 목록 보기 ── */
+  .nav{display:flex;align-items:center}
+  .viewbtn{border:1px solid var(--line)!important;background:var(--card)!important;border-radius:8px;width:28px;height:26px;padding:0!important;margin-left:6px;font-size:13px!important;color:var(--ink)!important;display:inline-flex;align-items:center;justify-content:center}
+  .list-mode .dow,.list-mode #weeks{display:none}
+  #mlist{display:none;padding:4px 12px 100px}
+  .list-mode #mlist{display:block}
+  .ml-empty{text-align:center;color:var(--muted);font-size:13px;padding:60px 0}
+
+  #mlist{padding:4px 8px 100px}
+  .mtab{width:100%;border-collapse:collapse;background:var(--card);border-radius:12px;overflow:hidden;font-size:12px}
+  .mtab th{background:#ECEEF1;color:var(--muted);font-weight:600;font-size:10.5px;padding:7px 6px;text-align:left}
+  .mtab td{border-top:1px solid var(--line);padding:6px;vertical-align:top}
+  .mtab td.d{width:44px;white-space:nowrap;color:var(--ink)}
+  .mtab td.d small{color:var(--muted);margin-left:3px;font-size:10px}
+  .mtab tr.sun td.d,.mtab tr.sun td.d small{color:#C0776B}
+  .mtab tr.today td{background:#F1F2F4}
+  .mtab tr.today td.d{font-weight:700}
+  .mtab tr.dd td.d b{display:inline-block;background:#FCE4EE;color:#C2386F;border-radius:9px;padding:0 5px;font-weight:700}
+  .mtab td.t{width:38px;color:var(--muted);font-size:11px}
+  .mtab .row1+.row1{margin-top:3px}
+  .mtab td.w{width:46px;white-space:nowrap}
+  .mtab .who{white-space:nowrap}
+  .mtab .who{display:inline-block;font-size:10px;border-radius:4px;padding:0 5px;line-height:16px}
+  .mtab .who.a{background:var(--a-bg);color:var(--a-ink)} .mtab .who.b{background:var(--b-bg);color:var(--b-ink)} .mtab .who.us{background:var(--us);color:#fff} .mtab .who.d{background:#FCE4EE;color:#C2386F}
+  .mtab .empty{color:#C4C7CC}
+  .mtab tr.sub td{border-top:1px dashed #EEF0F2}
+  .mtab .cmt{font-size:10.5px;color:var(--muted);line-height:1.45;margin-top:2px;white-space:pre-wrap;word-break:break-word}
+  .mtab .ev{cursor:pointer}
+
+  /* ── 좌우 스와이프로 달 넘기기 ── */
+  #calView{touch-action:pan-y}
+  @keyframes inR{from{transform:translateX(28%);opacity:0}to{transform:none;opacity:1}}
+  @keyframes inL{from{transform:translateX(-28%);opacity:0}to{transform:none;opacity:1}}
+  .slide-next #weeks,.slide-next #mlist{animation:inR .22s ease-out}
+  .slide-prev #weeks,.slide-prev #mlist{animation:inL .22s ease-out}
 </style>
 </head>
 <body>
@@ -258,13 +294,14 @@
 <div class="app" id="app">
   <div class="toast" id="toast"></div>
   <header>
-    <div class="nav"><button onclick="move(-1)">‹</button><span class="month" id="mtitle" onclick="openYM()"></span><button onclick="move(1)">›</button></div>
+    <div class="nav"><button onclick="move(-1)">‹</button><span class="month" id="mtitle" onclick="openYM()"></span><button onclick="move(1)">›</button><button class="viewbtn" id="vbtn" onclick="toggleList()" aria-label="List view">☰</button></div>
     <div class="hright"><span class="dday"><i>♡</i><span id="ddayNum"></span></span><button class="today-btn" onclick="goToday()" data-i="today"></button></div>
   </header>
 
   <div class="content" id="calView">
     <div class="dow" id="dow"></div>
     <div id="hint"></div>
+    <div id="mlist"></div>
     <div class="weeks" id="weeks"><div class="loading" data-i="loading"></div></div>
   </div>
 
@@ -372,7 +409,7 @@ const wk=d=>WK[d.getDay()].charAt(0)+WK[d.getDay()].slice(1).toLowerCase();
 const DICT={
   today:'Today',loading:'Loading…',
   account:'Account',email:'Email',password:'Password',login:'Log in',loggingIn:'Logging in…',welcome:n=>`Welcome, ${n}`,welcomeAll:'Our calendar',
-  loginFoot:'You only need to log in once on this phone.',loginErr:'Wrong email or password. Please try again.',notMember:'This account is not registered in config.js.',myNote:'My note',notePh:'A few words about today',save:'Save',tabCal:'Calendar',dateLabel:'💘 Date',tabNote:'Note',writeNote:'Write',editNote:'Edit',noNoteDay:'No notes yet.',tabFeed:'Timeline',noNotesMonth:'No notes this month.',replying:'Replying to',
+  loginFoot:'You only need to log in once on this phone.',loginErr:'Wrong email or password. Please try again.',notMember:'This account is not registered in config.js.',myNote:'My note',notePh:'A few words about today',save:'Save',tabCal:'Calendar',noEvMonth:'No events this month.',colDate:'Date',colTime:'Time',colTitle:'Event',colWho:'Who',dateLabel:'💘 Date',tabNote:'Note',writeNote:'Write',editNote:'Edit',noNoteDay:'No notes yet.',tabFeed:'Timeline',noNotesMonth:'No notes this month.',replying:'Replying to',
   newEv:'New event',editEv:'Edit event',dates:'Dates',time:'Time (optional)',clearTime:'Clear',title:'Title',titlePh:'e.g. Trip to Busan',
   comments:'Comments (optional)',commentsPh:'Place, details, links…',whose:'Whose event?',us:'Us',
   del:'Delete',cancel:'Cancel',close:'Close',addEv:'+ Add event',noEvents:'No events on this day.',allDay:'All day',
@@ -437,6 +474,7 @@ function goToday(){
 function render(){
   document.getElementById('mtitle').textContent=DICT.monthTitle(view);
   ddayNum.textContent=dayNo(today());
+  if(listMode)renderList();
   if(window.feedView&&feedView.style.display==='block')renderFeed();
   const first=new Date(view.getFullYear(),view.getMonth(),1);
   const start=new Date(first); start.setDate(1-first.getDay());
@@ -482,6 +520,7 @@ function move(n){view=new Date(view.getFullYear(),view.getMonth()+n,1);render()}
 function tapDay(k){
   if(!ME)return;
   if(lpFired){lpFired=false;return;}
+  if(Date.now()-swAt<450)return;
   if(!sel){sel=k;render();return;}
   const a=sel<k?sel:k, b=sel<k?k:sel; sel=null; render();
   editing=null; openSheet({start:a,end:b,owner:ME});
@@ -534,6 +573,46 @@ function renderFeed(){
     const evs=events.filter(e=>e.owner!=='D'&&e.start<=k&&e.end>=k).sort((a,b)=>(a.time||'').localeCompare(b.time||'')||a.title.localeCompare(b.title));
     return `<div class="thread"><div class="dh"><span class="dd">${DICT.dayTitle(k)}</span>${evLine(evs)}${n>=1?`<span class="ms2">♡ ${n}</span>`:''}</div>${body}</div>`;
   }).join('');
+}
+
+/* ───── 월별 목록 보기 (상단 ☰ 버튼) ───── */
+let listMode=false;
+function toggleList(){listMode=!listMode;app.classList.toggle('list-mode',listMode);vbtn.textContent=listMode?'▦':'☰';if(sel){sel=null;}render();}
+const dayEvents=k=>events.filter(e=>e.start<=k&&e.end>=k).sort((a,b)=>(a.owner==='D'?-1:0)-(b.owner==='D'?-1:0)||(a.time||'').localeCompare(b.time||'')||a.title.localeCompare(b.title));
+const evName=e=>e.title||(e.owner==='D'?DICT.dateLabel:'');
+const whoLabel=o=>o==='A'?NAMES.A:o==='B'?NAMES.B:o==='D'?'💘':'Us';
+
+function renderList(){
+  const y=view.getFullYear(), m=view.getMonth(), last=new Date(y,m+1,0).getDate(), T=today();
+  let h=`<table class="mtab"><tr><th>${DICT.colDate}</th><th>${DICT.colTime}</th><th>${DICT.colTitle}</th><th>${DICT.colWho}</th></tr>`;
+  for(let i=1;i<=last;i++){
+    const d=new Date(y,m,i), k=ymd(d), evs=dayEvents(k);
+    const c=[]; if(d.getDay()===0)c.push('sun'); if(k===T)c.push('today'); if(evs.some(e=>e.owner==='D'))c.push('dd');
+    const dcell=n=>`<td class="d"${n>1?` rowspan="${n}"`:''}><b>${pad(i)}</b><small>${WK[d.getDay()].slice(0,3)}</small></td>`;
+    if(!evs.length){h+=`<tr class="${c.join(' ')} first">${dcell(1)}<td class="t"></td><td class="empty">–</td><td class="w"></td></tr>`;continue;}
+    // 일정 하나당 한 줄 (날짜 칸은 합쳐서)
+    evs.forEach((e,j)=>{
+      h+=`<tr class="${c.join(' ')} ${j?'sub':'first'}">${j?'':dcell(evs.length)}<td class="t">${e.time||''}</td><td class="ev" onclick="openEdit('${e.id}')">${esc(evName(e))}${e.comment?`<div class="cmt">${esc(e.comment)}</div>`:''}</td><td class="w"><span class="who ${cls(e.owner)}">${esc(whoLabel(e.owner))}</span></td></tr>`;
+    });
+  }
+  mlist.innerHTML=h+'</table>';
+}
+
+/* ───── 좌우 스와이프: ← 다음 달 / → 이전 달 ───── */
+let swX=null, swY=null, swAt=0;
+calView.addEventListener('pointerdown',e=>{swX=e.clientX;swY=e.clientY;});
+calView.addEventListener('pointerup',e=>{
+  if(swX===null)return;
+  const dx=e.clientX-swX, dy=e.clientY-swY; swX=null;
+  if(Math.abs(dx)<60||Math.abs(dx)<Math.abs(dy)*1.5)return;   // 짧거나 세로로 움직이면 무시
+  if(app.className.match(/open-/))return;                     // 창이 열려 있으면 무시
+  swAt=Date.now(); clearTimeout(lpTimer); sel=null;
+  slideMove(dx<0?1:-1);
+});
+calView.addEventListener('pointercancel',()=>{swX=null;});
+function slideMove(n){
+  calView.classList.remove('slide-next','slide-prev'); void calView.offsetWidth;
+  move(n); calView.classList.add(n>0?'slide-next':'slide-prev');
 }
 function closeSheet(){app.classList.remove('open-ev','open-day','open-choice','open-ym','open-note');editing=null}
 // Note 창 열기 (k 날짜) — ✎ 버튼: 날짜를 하나 눌러둔 상태면 그 날짜, 아니면 오늘
