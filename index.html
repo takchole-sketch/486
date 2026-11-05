@@ -372,7 +372,7 @@ const wk=d=>WK[d.getDay()].charAt(0)+WK[d.getDay()].slice(1).toLowerCase();
 const DICT={
   today:'Today',loading:'Loading…',
   account:'Account',email:'Email',password:'Password',login:'Log in',loggingIn:'Logging in…',welcome:n=>`Welcome, ${n}`,welcomeAll:'Our calendar',
-  loginFoot:'You only need to log in once on this phone.',loginErr:'Wrong email or password. Please try again.',notMember:'This account is not registered in config.js.',myNote:'My note',notePh:'A few words about today',save:'Save',tabCal:'Calendar',tabNote:'Note',writeNote:'Write',editNote:'Edit',noNoteDay:'No notes yet.',tabFeed:'Timeline',noNotesMonth:'No notes this month.',replying:'Replying to',
+  loginFoot:'You only need to log in once on this phone.',loginErr:'Wrong email or password. Please try again.',notMember:'This account is not registered in config.js.',myNote:'My note',notePh:'A few words about today',save:'Save',tabCal:'Calendar',dateLabel:'💘 Date',tabNote:'Note',writeNote:'Write',editNote:'Edit',noNoteDay:'No notes yet.',tabFeed:'Timeline',noNotesMonth:'No notes this month.',replying:'Replying to',
   newEv:'New event',editEv:'Edit event',dates:'Dates',time:'Time (optional)',clearTime:'Clear',title:'Title',titlePh:'e.g. Trip to Busan',
   comments:'Comments (optional)',commentsPh:'Place, details, links…',whose:'Whose event?',us:'Us',
   del:'Delete',cancel:'Cancel',close:'Close',addEv:'+ Add event',noEvents:'No events on this day.',allDay:'All day',
@@ -577,7 +577,7 @@ function openDay(k){
   dTitle.textContent=DICT.dayTitle(k);
   const list=events.filter(e=>e.start<=k&&e.end>=k)
     .sort((a,b)=>(a.time||'').localeCompare(b.time||'')||a.title.localeCompare(b.title));
-  dayList.innerHTML=list.length?list.map(e=>`<div class="dl" onclick="openEdit('${e.id}')"><i class="dot ${cls(e.owner)}"></i><span class="tm">${e.time||DICT.allDay}</span><span class="ttl">${esc(e.title)}${e.series?'<span class="rp">🔁</span>':''}${e.comment?'<span class="cm">💬</span>':''}</span>${e.start!==e.end?`<span class="rg">${short(e.start)} – ${short(e.end)}</span>`:''}</div>`).join('')
+  dayList.innerHTML=list.length?list.map(e=>`<div class="dl" onclick="openEdit('${e.id}')"><i class="dot ${cls(e.owner)}"></i><span class="tm">${e.time||DICT.allDay}</span><span class="ttl">${esc(e.title||(e.owner==='D'?DICT.dateLabel:''))}${e.series?'<span class="rp">🔁</span>':''}${e.comment?'<span class="cm">💬</span>':''}</span>${e.start!==e.end?`<span class="rg">${short(e.start)} – ${short(e.end)}</span>`:''}</div>`).join('')
     :`<div class="dl-empty">${DICT.noEvents}</div>`;
   // 그날 노트 (읽기) + 내 노트 쓰기 버튼
   const ns=diaries.filter(x=>x.date===k), mine=ns.find(x=>x.who===ME);
@@ -745,7 +745,7 @@ function clean(ev) {
   if (!['A', 'B', 'US', 'D'].includes(ev.owner)) throw new Error('Invalid event type');
   let start = ev.start, end = ev.end; if (end < start) [start, end] = [end, start];
   return { start, end, owner: ev.owner,
-    title: String(ev.title || '').trim().slice(0, 100) || '(untitled)',
+    title: String(ev.title || '').trim().slice(0, 100) || (ev.owner === 'D' ? '' : '(untitled)'),
     time: /^\d{2}:\d{2}$/.test(String(ev.time || '')) ? ev.time : '',
     comment: String(ev.comment || '').trim().slice(0, 500) };
 }
