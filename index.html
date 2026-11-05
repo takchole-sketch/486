@@ -232,7 +232,7 @@
   .chip.d{flex:0 0 46px;font-size:15px;padding:6px 0}
   .chip.on.d{background:#FCE4EE;border-color:#D6457F}
   #evSheet .chip.d{padding:5px 0;font-size:14px}
-  .cell.dd .num{background:#FCE4EE;color:#C2386F;font-weight:700}
+  .cell.dd .num{background:#FCE4EE}   /* 글자색·굵기는 평소 그대로 */
   .cell.dd.today .num{background:#D6457F;color:#fff}
   .dot.d{background:#D6457F}
 
@@ -245,15 +245,22 @@
   .ml-empty{text-align:center;color:var(--muted);font-size:13px;padding:60px 0}
 
   #mlist{padding:4px 8px 100px}
-  .mtab{width:100%;border-collapse:collapse;background:var(--card);border-radius:12px;overflow:hidden;font-size:12px}
-  .mtab th{background:#ECEEF1;color:var(--muted);font-weight:600;font-size:10.5px;padding:7px 6px;text-align:left}
+  .mtab{width:100%;border-collapse:separate;border-spacing:0;background:var(--card);border-radius:12px;font-size:12px}
+  .mtab th{background:#ECEEF1;color:var(--muted);font-weight:600;font-size:10.5px;padding:7px 6px;text-align:left;position:sticky;top:0;z-index:2}
+  .mtab th:first-child{border-top-left-radius:12px} .mtab th:last-child{border-top-right-radius:12px}
+  .mtab tr:last-child td:first-child{border-bottom-left-radius:12px} .mtab tr:last-child td:last-child{border-bottom-right-radius:12px}
+  /* 제목 앞 색 점 */
+  .mtab .ev .pt{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:1px}
+  .mtab .ev .pt.a{background:var(--a)} .mtab .ev .pt.b{background:var(--b)} .mtab .ev .pt.us{background:var(--us)} .mtab .ev .pt.d{background:#D6457F}
+  .mtab .ev .cmt{margin-left:13px}
+  #mlist{padding-top:0!important}
   .mtab td{border-top:1px solid var(--line);padding:6px;vertical-align:top}
   .mtab td.d{width:44px;white-space:nowrap;color:var(--ink)}
   .mtab td.d small{color:var(--muted);margin-left:3px;font-size:10px}
   .mtab tr.sun td.d,.mtab tr.sun td.d small{color:#C0776B}
   .mtab tr.today td{background:#F1F2F4}
   .mtab tr.today td.d{font-weight:700}
-  .mtab tr.dd td.d b{display:inline-block;background:#FCE4EE;color:#C2386F;border-radius:9px;padding:0 5px;font-weight:700}
+  .mtab tr.dd td.d b{display:inline-block;background:#FCE4EE;border-radius:9px;padding:0 5px}   /* 글자색·굵기는 다른 날과 같게 */
   .mtab td.t{width:38px;color:var(--muted);font-size:11px}
   .mtab .row1+.row1{margin-top:3px}
   .mtab td.w{width:46px;white-space:nowrap}
@@ -521,6 +528,8 @@ function tapDay(k){
   if(!ME)return;
   if(lpFired){lpFired=false;return;}
   if(Date.now()-swAt<450)return;
+  // 💘 날짜를 탭하면 → 그날 목록 (날짜 선택 중이 아닐 때)
+  if(!sel){const dd=events.find(e=>e.owner==='D'&&e.start<=k&&e.end>=k);if(dd){openDay(k);return;}}
   if(!sel){sel=k;render();return;}
   const a=sel<k?sel:k, b=sel<k?k:sel; sel=null; render();
   editing=null; openSheet({start:a,end:b,owner:ME});
@@ -584,15 +593,15 @@ const whoLabel=o=>o==='A'?NAMES.A:o==='B'?NAMES.B:o==='D'?'💘':'Us';
 
 function renderList(){
   const y=view.getFullYear(), m=view.getMonth(), last=new Date(y,m+1,0).getDate(), T=today();
-  let h=`<table class="mtab"><tr><th>${DICT.colDate}</th><th>${DICT.colTime}</th><th>${DICT.colTitle}</th><th>${DICT.colWho}</th></tr>`;
+  let h=`<table class="mtab"><tr><th>${DICT.colDate}</th><th>${DICT.colTime}</th><th>${DICT.colTitle}</th></tr>`;
   for(let i=1;i<=last;i++){
     const d=new Date(y,m,i), k=ymd(d), evs=dayEvents(k);
     const c=[]; if(d.getDay()===0)c.push('sun'); if(k===T)c.push('today'); if(evs.some(e=>e.owner==='D'))c.push('dd');
     const dcell=n=>`<td class="d"${n>1?` rowspan="${n}"`:''}><b>${pad(i)}</b><small>${WK[d.getDay()].slice(0,3)}</small></td>`;
-    if(!evs.length){h+=`<tr class="${c.join(' ')} first">${dcell(1)}<td class="t"></td><td class="empty">–</td><td class="w"></td></tr>`;continue;}
+    if(!evs.length){h+=`<tr class="${c.join(' ')} first">${dcell(1)}<td class="t"></td><td class="empty">–</td></tr>`;continue;}
     // 일정 하나당 한 줄 (날짜 칸은 합쳐서)
     evs.forEach((e,j)=>{
-      h+=`<tr class="${c.join(' ')} ${j?'sub':'first'}">${j?'':dcell(evs.length)}<td class="t">${e.time||''}</td><td class="ev" onclick="openEdit('${e.id}')">${esc(evName(e))}${e.comment?`<div class="cmt">${esc(e.comment)}</div>`:''}</td><td class="w"><span class="who ${cls(e.owner)}">${esc(whoLabel(e.owner))}</span></td></tr>`;
+      h+=`<tr class="${c.join(' ')} ${j?'sub':'first'}">${j?'':dcell(evs.length)}<td class="t">${e.time||''}</td><td class="ev" onclick="openEdit('${e.id}')"><i class="pt ${cls(e.owner)}"></i>${esc(evName(e))}${e.comment?`<div class="cmt">${esc(e.comment)}</div>`:''}</td></tr>`;
     });
   }
   mlist.innerHTML=h+'</table>';
