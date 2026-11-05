@@ -227,6 +227,14 @@
   .dnotes .hd button{border:none;background:none;font-size:12px;color:var(--ink);font-weight:600;cursor:pointer;font-family:inherit;padding:2px 0}
   .dnotes .entry{font-size:12.5px}
   .dnotes .none{font-size:12px;color:#B7BBC1;padding:2px 0}
+
+  /* ── 💘 데이트 기록 ── */
+  .chip.d{flex:0 0 46px;font-size:15px;padding:6px 0}
+  .chip.on.d{background:#FCE4EE;border-color:#D6457F}
+  #evSheet .chip.d{padding:5px 0;font-size:14px}
+  .cell.dd .num{background:#FCE4EE;color:#C2386F;font-weight:700}
+  .cell.dd.today .num{background:#D6457F;color:#fff}
+  .dot.d{background:#D6457F}
 </style>
 </head>
 <body>
@@ -303,6 +311,7 @@
       <button class="chip a" data-t="A" onclick="pick('A')"></button>
       <button class="chip b" data-t="B" onclick="pick('B')"></button>
       <button class="chip us" data-t="US" onclick="pick('US')" data-i="us"></button>
+      <button class="chip d" data-t="D" onclick="pick('D')" aria-label="Date">💘</button>
     </div>
     <div class="actions">
       <button class="btn del" id="fDel" onclick="delEvent()" data-i="del"></button>
@@ -390,7 +399,7 @@ let ME=null, events=[], diaries=[];
 let view=new Date(); view=new Date(view.getFullYear(),view.getMonth(),1);
 let sel=null, editing=null, pickT='A', dayK=null, lpFired=false, lpTimer=null;
 const short=k=>{const d=parse(k);return `${pad(d.getMonth()+1)}/${pad(d.getDate())}`};
-const cls=owner=>owner==='A'?'a':owner==='B'?'b':'us';   // 색: A=파랑, B=초록, US=블랙
+const cls=owner=>owner==='A'?'a':owner==='B'?'b':owner==='D'?'d':'us';   // 색: A=파랑, B=초록, US=블랙, D(💘 데이트)=분홍
 const today=()=>ymd(new Date());
 
 // 저장·삭제는 아래 Firebase 모듈(window.API)이 처리해요
@@ -448,11 +457,12 @@ function render(){
       if(k===T)c.push('today');
       if(sel===k)c.push('sel');
       if(milestone(k))c.push('has-ms');
+      if(events.some(e=>e.owner==='D'&&e.start<=k&&e.end>=k))c.push('dd');
       // 노트 점: A가 쓴 날 파랑, B가 쓴 날 초록
       const nd=['A','B'].filter(p=>diaries.some(x=>x.date===k&&x.who===p)).map(p=>`<i class="${cls(p)}"></i>`).join('');
       cells+=`<div class="${c.join(' ')}" style="grid-column:${i+1}" data-k="${k}" onclick="tapDay('${k}')"><span class="num">${d.getDate()}</span>${nd?`<span class="ndots">${nd}</span>`:''}${milestone(k)?`<span class="ms">♡${milestone(k)}</span>`:''}<span class="more" data-k="${k}"></span></div>`;
     }
-    const segs=events.filter(e=>e.start<=ymd(we)&&e.end>=ymd(ws)).map(e=>({
+    const segs=events.filter(e=>e.owner!=='D'&&e.start<=ymd(we)&&e.end>=ymd(ws)).map(e=>({
       e, s:Math.max(0,Math.round((parse(e.start)-ws)/864e5)), en:Math.min(6,Math.round((parse(e.end)-ws)/864e5))
     })).sort((a,b)=>a.s-b.s||(b.en-b.s)-(a.en-a.s)||(a.e.time||'').localeCompare(b.e.time||''));
     const lanes=[]; let bars=''; const hidden={};
@@ -521,7 +531,7 @@ function renderFeed(){
       const reply=i>0?`<div class="rp">${DICT.replying} <b class="${cls(ts[0].who)}">${esc(NAMES[ts[0].who])}</b></div>`:'';
       return `<div class="tw ${i<ts.length-1?'has-next':''}"><div class="av ${c}">${esc(nm.slice(0,1))}</div><div class="bd"><div class="nm">${esc(nm)}</div>${reply}<div class="tx">${esc(x.text)}</div></div></div>`;
     }).join('');
-    const evs=events.filter(e=>e.start<=k&&e.end>=k).sort((a,b)=>(a.time||'').localeCompare(b.time||'')||a.title.localeCompare(b.title));
+    const evs=events.filter(e=>e.owner!=='D'&&e.start<=k&&e.end>=k).sort((a,b)=>(a.time||'').localeCompare(b.time||'')||a.title.localeCompare(b.title));
     return `<div class="thread"><div class="dh"><span class="dd">${DICT.dayTitle(k)}</span>${evLine(evs)}${n>=1?`<span class="ms2">♡ ${n}</span>`:''}</div>${body}</div>`;
   }).join('');
 }
@@ -732,7 +742,7 @@ const whoOf = email => email === ACC.A.email ? 'A' : email === ACC.B.email ? 'B'
 const isDate = s => /^\d{4}-\d{2}-\d{2}$/.test(String(s));
 function clean(ev) {
   if (!isDate(ev.start) || !isDate(ev.end)) throw new Error('Invalid date');
-  if (!['A', 'B', 'US'].includes(ev.owner)) throw new Error('Invalid event type');
+  if (!['A', 'B', 'US', 'D'].includes(ev.owner)) throw new Error('Invalid event type');
   let start = ev.start, end = ev.end; if (end < start) [start, end] = [end, start];
   return { start, end, owner: ev.owner,
     title: String(ev.title || '').trim().slice(0, 100) || '(untitled)',
